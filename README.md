@@ -39,7 +39,7 @@ http://www.instructables.com/id/Persistence-of-Vision-Wand/
 https://learn.sparkfun.com/tutorials/adxl337-and-adxl377-accelerometer-hookup-guide
 
 
-Meeting Notes:
+## Meeting Notes:
 Look for LED’s and Res’
 
 
