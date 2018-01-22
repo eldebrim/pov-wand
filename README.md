@@ -41,5 +41,6 @@ https://learn.sparkfun.com/tutorials/adxl337-and-adxl377-accelerometer-hookup-gu
 
 ## Meeting Notes:
 Look for LED’s and Res’
+Look up 3D printing a support to hold up the board, LEDs and possibly battery.
 
 
