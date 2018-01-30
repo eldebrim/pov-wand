@@ -31,6 +31,7 @@ int w[] = {28, 3, 12, 3, 28};
 int x[] = {17, 10, 4, 10, 17};
 int y[] = {17, 10, 4, 8, 16};
 int z[] = {19, 21, 21, 25, 0};
+int space[] = {0,0,0,0,0};
 
 // Variables to dictate pin headers
 const int accX = A0;
@@ -41,17 +42,27 @@ const int LEDpinmap[noPixels] = {2,3,4,5,6,7,8,9,10,11};  // maps the LEDs to th
 // pin 2 is the top led
 
 // POV variables
-int delayTime = 10;
+int delayTime = 2;
+int charBreak = 4;
+int tick = 0;
+int tock = 0;
+int currentSwing = 0;
+int swingTime = 0;
+int left = 0;
+int right = 0;
 int currentRate = 0;
-int setRate = 0;
-int charBreak = 2;
+int pattern = 0;
+int pos_thresh;         // positive acceleration threshold
+int neg_thresh;         // negatiive acceleration threshold
+boolean braking;        // decelleration flag
+int dir;
 
 void setup() 
 {
   // initialize serial
   Serial.begin(115200);
   delay(4);
-
+  
   // initalize the pins
   for (int i=0; i < noPixels; i++)
   {
@@ -63,17 +74,24 @@ void setup()
   pinMode(accZ, INPUT);
 
   //intialize the acceleromiter values
-  setRate = analogRead(accX) + analogRead(accY);
+  left = right = analogRead(accX) + analogRead(accY);
   //delayTime += setRate;
+
+  // Set the detection thresholds
+  // Note that these may need to be inverted when the unit is held 
+  // switch-side up instead of USB-cable side.
+  pos_thresh =  20;
+  neg_thresh = -20;
+
+  braking = false;
 }
 
 void loop() 
 {
   // reference the external voltage reference, in order to make the median V 3.3
   analogReference(EXTERNAL);
-  
   // change the word to be displayed here
-  displayString("hi");
+  displayString("beavers");
 }
 
 // function that acceps an interger containing the hight of a specific row of a character and maps it into LED's
@@ -142,46 +160,12 @@ void displayLine(int line)
     digitalWrite(LEDpinmap[9], LOW);
   }
 
-  // testing for finding the "normal" acc values
-  Serial.print(analogRead(accX));
-  Serial.print("\t");
-  Serial.print(analogRead(accY));
-  Serial.print("\t");
-  Serial.print(analogRead(accZ));
-  Serial.print("\t");
-  Serial.print(delayTime);
-  Serial.print("\n");
-  //delay(10);
-
-  //sample code for the adjustment of the speed
-  currentRate = analogRead(accX) + analogRead(accY);
-  if(currentRate < setRate)
-  {
-    if(delayTime + (setRate-currentRate) < 50)
-    {
-      delayTime = delayTime + (setRate-currentRate);
-    }
-    else
-    {
-      delayTime = 50;
-    }
-  }
-  if(currentRate > setRate)
-  {
-    if(delayTime - (currentRate-setRate) > 0)
-    {
-      delayTime = delayTime - (currentRate-setRate);
-    }
-    else
-    {
-      delayTime = 1;
-    }
-  }
-  setRate = currentRate;
+  // call the function that adjusts the speed of the display
+  adjustSpeed();
 }
 
 // function that accepts one character from the provided word and calls display line for each of the 5 preset lines of a char
-void displayChar(char c)
+void displayCharL(char c)
 {
   if (c == 'a'){for (int i = 0; i <5; i++){displayLine(a[i]);delay(delayTime);}displayLine(0);}
   if (c == 'b'){for (int i = 0; i <5; i++){displayLine(b[i]);delay(delayTime);}displayLine(0);}
@@ -209,6 +193,42 @@ void displayChar(char c)
   if (c == 'x'){for (int i = 0; i <5; i++){displayLine(x[i]);delay(delayTime);}displayLine(0);}
   if (c == 'y'){for (int i = 0; i <5; i++){displayLine(y[i]);delay(delayTime);}displayLine(0);}
   if (c == 'z'){for (int i = 0; i <5; i++){displayLine(z[i]);delay(delayTime);}displayLine(0);}
+  if (c == ' '){for (int i = 0; i <5; i++){displayLine(space[i]);delay(delayTime);}displayLine(0);}
+
+  // add in the preset character spacing
+  delay(charBreak);
+}
+
+// function that accepts one character from the provided word and calls display line for each of the 5 preset lines of a char
+void displayCharR(char c)
+{
+  if (c == 'a'){for (int i = 5; i > 0; i--){displayLine(a[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'b'){for (int i = 5; i > 0; i--){displayLine(b[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'c'){for (int i = 5; i > 0; i--){displayLine(c2[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'd'){for (int i = 5; i > 0; i--){displayLine(d[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'e'){for (int i = 5; i > 0; i--){displayLine(e[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'f'){for (int i = 5; i > 0; i--){displayLine(f[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'g'){for (int i = 5; i > 0; i--){displayLine(g[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'h'){for (int i = 5; i > 0; i--){displayLine(h[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'i'){for (int it = 5; it > 0; it--){displayLine(i[it]);delay(delayTime);}displayLine(0);}
+  if (c == 'j'){for (int i = 5; i > 0; i--){displayLine(j[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'k'){for (int i = 5; i > 0; i--){displayLine(k[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'l'){for (int i = 5; i > 0; i--){displayLine(l[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'm'){for (int i = 5; i > 0; i--){displayLine(m[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'n'){for (int i = 5; i > 0; i--){displayLine(n[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'o'){for (int i = 5; i > 0; i--){displayLine(o[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'p'){for (int i = 5; i > 0; i--){displayLine(p[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'q'){for (int i = 5; i > 0; i--){displayLine(q[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'r'){for (int i = 5; i > 0; i--){displayLine(r[i]);delay(delayTime);}displayLine(0);}
+  if (c == 's'){for (int i = 5; i > 0; i--){displayLine(s[i]);delay(delayTime);}displayLine(0);}
+  if (c == 't'){for (int i = 5; i > 0; i--){displayLine(t[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'u'){for (int i = 5; i > 0; i--){displayLine(u[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'v'){for (int i = 5; i > 0; i--){displayLine(v[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'w'){for (int i = 5; i > 0; i--){displayLine(w[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'x'){for (int i = 5; i > 0; i--){displayLine(x[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'y'){for (int i = 5; i > 0; i--){displayLine(y[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'z'){for (int i = 5; i > 0; i--){displayLine(z[i]);delay(delayTime);}displayLine(0);}
+  if (c == ' '){for (int i = 5; i > 0; i--){displayLine(space[i]);delay(delayTime);}displayLine(0);}
 
   // add in the preset character spacing
   delay(charBreak);
@@ -217,10 +237,94 @@ void displayChar(char c)
 // takes the given string and calls displayChar for each character of the string
 void displayString(char* s)
 {
-  for (int i = 0; i<=strlen(s); i++)
+  if (dir > 0)
   {
-    displayChar(s[i]);
-   }
+    for (int i = 0; i<=strlen(s); i++)
+    {
+      displayCharL(s[i]);
+    }
+  }
+  else
+  {
+    for (int i = strlen(s); i >= 0; i--)
+    {
+      displayCharR(s[i]);
+    }
+  }
 }  
 
-//Parts of the code are donated from: https://diyhacking.com/arduino-pov-display/
+// reads in the accelerometer data and adjusts the display speed accordingly
+void adjustSpeed()
+{
+  // testing for finding the "normal" acc values
+  Serial.print(analogRead(accX));
+  Serial.print("    ");
+  Serial.print(analogRead(accY));
+  Serial.print(",");
+  //Serial.print(delayTime);
+  //Serial.print("\n");
+
+  //read the accelerometer data and adjust the speed accordingly.
+  //currentRate = analogRead(accX) + analogRead(accY);
+  //currentRate = currentRate - 900; // to zero center reading
+  //Serial.print(currentRate);
+  //Serial.print("\n");
+
+  /*// sit and wait for a L -> R swing
+  if((analogRead(accX) - 430) < 0)
+  {
+      swingLeft = true;
+  }
+  else if((analogRead(accX) - 600) < 0)
+  {
+      swingLeft = false;
+  }
+  
+  if(currentRate <= left) //TODO is it less or greater? Check output vals
+  {
+    tick = millis();
+    left = currentRate;
+  }
+  else if(currentRate >= right)
+  {
+    tock = millis();
+    right = currentRate;
+  }
+  
+  currentSwing = tock - tick;
+  if(currentSwing > 0) // it measured a L -> R swing
+  {
+    if(currentSwing > swingTime)
+    {
+       delayTime++;
+    }
+    else if(currentSwing < swingTime)
+    {
+      delayTime--;
+    }
+    swingTime = currentSwing;
+  }
+  */
+  currentRate = analogRead(accX);
+  currentRate = currentRate - 500; // to zero center reading
+  // Check the thresholds to see if we are decellerating
+  if (currentRate > pos_thresh || currentRate < neg_thresh)
+  {
+    if (analogRead(accY) > 500 && braking == false)
+    {
+      braking = true;
+      Serial.print("stopping\n");
+      if (currentRate > 0)
+        dir = 1; // Moving R -> L
+      else
+        dir = 0; // Moving L -> R
+    }
+  }
+  else if (analogRead(accY) < 430 && braking == true) 
+  {
+      braking = false; 
+      //delay(35); // A maximum length word (7*5)
+  }
+}
+
+//Parts of the code are donated from: https://diyhacking.com/arduino-pov-display/, which is an open source DIY website. Therefore, all tutorials and code are on the public domain.
