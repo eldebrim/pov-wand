@@ -42,11 +42,11 @@ const int LEDpinmap[noPixels] = {2,3,4,5,6,7,8,9,10,11};  // maps the LEDs to th
 // pin 2 is the top led
 
 // POV variables
-int delayTime = 2;
-int charBreak = 4;
-int tick = 0;
-int tock = 0;
-int currentSwing = 0;
+double delayTime = 10;
+double charBreak = 10;
+long tick = 0;
+long tock = 0;
+long currentSwing = 600;
 int swingTime = 0;
 int left = 0;
 int right = 0;
@@ -54,8 +54,19 @@ int currentRate = 0;
 int pattern = 0;
 int pos_thresh;         // positive acceleration threshold
 int neg_thresh;         // negatiive acceleration threshold
-boolean braking;        // decelleration flag
+boolean swingLeft;        // decelleration flag
 int dir;
+long edgeTime;
+
+// Stuff for the accelerometer part
+int xdata;
+int ydata;
+int deltax;
+int deltay;
+int oldx;
+int oldy;
+int magnitude_accelerometer;
+int mag_movement = 10; //  The minimum value of magnitude accelerometer that means there has been movement
 
 void setup() 
 {
@@ -72,26 +83,13 @@ void setup()
   pinMode(accX, INPUT);
   pinMode(accY, INPUT);
   pinMode(accZ, INPUT);
-
-  //intialize the acceleromiter values
-  left = right = analogRead(accX) + analogRead(accY);
-  //delayTime += setRate;
-
-  // Set the detection thresholds
-  // Note that these may need to be inverted when the unit is held 
-  // switch-side up instead of USB-cable side.
-  pos_thresh =  20;
-  neg_thresh = -20;
-
-  braking = false;
 }
 
 void loop() 
 {
   // reference the external voltage reference, in order to make the median V 3.3
   analogReference(EXTERNAL);
-  // change the word to be displayed here
-  displayString("beavers");
+  displayString("working"); // change here
 }
 
 // function that acceps an interger containing the hight of a specific row of a character and maps it into LED's
@@ -202,7 +200,7 @@ void displayCharL(char c)
 // function that accepts one character from the provided word and calls display line for each of the 5 preset lines of a char
 void displayCharR(char c)
 {
-  if (c == 'a'){for (int i = 5; i > 0; i--){displayLine(a[i]);delay(delayTime);}displayLine(0);}
+  /*if (c == 'a'){for (int i = 5; i > 0; i--){displayLine(a[i]);delay(delayTime);}displayLine(0);}
   if (c == 'b'){for (int i = 5; i > 0; i--){displayLine(b[i]);delay(delayTime);}displayLine(0);}
   if (c == 'c'){for (int i = 5; i > 0; i--){displayLine(c2[i]);delay(delayTime);}displayLine(0);}
   if (c == 'd'){for (int i = 5; i > 0; i--){displayLine(d[i]);delay(delayTime);}displayLine(0);}
@@ -228,8 +226,9 @@ void displayCharR(char c)
   if (c == 'x'){for (int i = 5; i > 0; i--){displayLine(x[i]);delay(delayTime);}displayLine(0);}
   if (c == 'y'){for (int i = 5; i > 0; i--){displayLine(y[i]);delay(delayTime);}displayLine(0);}
   if (c == 'z'){for (int i = 5; i > 0; i--){displayLine(z[i]);delay(delayTime);}displayLine(0);}
+  */
   if (c == ' '){for (int i = 5; i > 0; i--){displayLine(space[i]);delay(delayTime);}displayLine(0);}
-
+  
   // add in the preset character spacing
   delay(charBreak);
 }
@@ -237,7 +236,7 @@ void displayCharR(char c)
 // takes the given string and calls displayChar for each character of the string
 void displayString(char* s)
 {
-  if (dir > 0)
+  if (swingLeft)
   {
     for (int i = 0; i<=strlen(s); i++)
     {
@@ -248,7 +247,7 @@ void displayString(char* s)
   {
     for (int i = strlen(s); i >= 0; i--)
     {
-      displayCharR(s[i]);
+      displayCharR(' ');
     }
   }
 }  
@@ -260,71 +259,56 @@ void adjustSpeed()
   Serial.print(analogRead(accX));
   Serial.print("    ");
   Serial.print(analogRead(accY));
-  Serial.print(",");
-  //Serial.print(delayTime);
-  //Serial.print("\n");
+  Serial.print("\n");
 
-  //read the accelerometer data and adjust the speed accordingly.
-  //currentRate = analogRead(accX) + analogRead(accY);
-  //currentRate = currentRate - 900; // to zero center reading
-  //Serial.print(currentRate);
-  //Serial.print("\n");
+  // CHECK ACCELEROMETER
+  ydata = analogRead(accY);
+  xdata = analogRead(accX); 
+   
+  deltay = ydata - oldy;
+  deltay = xdata - oldx;
+  
+  deltay = sqrt(pow(deltay,2));
+ 
+  oldy = ydata;
+  oldx = xdata;
 
-  /*// sit and wait for a L -> R swing
-  if((analogRead(accX) - 430) < 0)
-  {
-      swingLeft = true;
-  }
-  else if((analogRead(accX) - 600) < 0)
-  {
-      swingLeft = false;
-  }
-  
-  if(currentRate <= left) //TODO is it less or greater? Check output vals
-  {
-    tick = millis();
-    left = currentRate;
-  }
-  else if(currentRate >= right)
-  {
-    tock = millis();
-    right = currentRate;
-  }
-  
-  currentSwing = tock - tick;
-  if(currentSwing > 0) // it measured a L -> R swing
-  {
-    if(currentSwing > swingTime)
-    {
-       delayTime++;
-    }
-    else if(currentSwing < swingTime)
-    {
-      delayTime--;
-    }
-    swingTime = currentSwing;
-  }
-  */
-  currentRate = analogRead(accX);
-  currentRate = currentRate - 500; // to zero center reading
-  // Check the thresholds to see if we are decellerating
-  if (currentRate > pos_thresh || currentRate < neg_thresh)
-  {
-    if (analogRead(accY) > 500 && braking == false)
-    {
-      braking = true;
-      Serial.print("stopping\n");
-      if (currentRate > 0)
-        dir = 1; // Moving R -> L
-      else
-        dir = 0; // Moving L -> R
+  //Serial.println(deltay);
+  if (deltay> mag_movement) 
+  {      
+    if(millis() > (edgeTime + (currentSwing*.60)))
+    {      
+      // sit and wait for a L -> R swing
+      if((ydata - 500) < -20)
+      {
+          tick = millis();
+          swingLeft = true;
+          edgeTime = millis();
+          /*Serial.print("swing delay: ");
+          Serial.println(currentSwing); 
+          Serial.println("\nDetected L edge\n");*/
+      }
+      else if ((ydata - 500) > 20)
+      {
+          tock = millis();    
+          swingLeft = false;
+          edgeTime = millis();
+          /*Serial.print("swing delay: ");
+          Serial.println(currentSwing); 
+          Serial.println("\nDetected R edge\n");*/
+      }    
     }
   }
-  else if (analogRead(accY) < 430 && braking == true) 
+
+  if((tock - tick) > 300 && (tock - tick) < 1000 )
   {
-      braking = false; 
-      //delay(35); // A maximum length word (7*5)
+    Serial.print("swing time: ");
+    Serial.println(currentSwing);
+    currentSwing = tock - tick;
+    delayTime = (currentSwing/150);
+    charBreak = (delayTime*2);
   }
 }
 
 //Parts of the code are donated from: https://diyhacking.com/arduino-pov-display/, which is an open source DIY website. Therefore, all tutorials and code are on the public domain.
+// and from: https://github.com/unigamer/POV-Wand/blob/master/Arduino/POV_Wand/POV_Wand.ino
