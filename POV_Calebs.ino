@@ -4,7 +4,7 @@
  * POV wand project
  */
 
-// letters
+// letter declarations. These are constant
 int a[] = {1, 6, 26, 6, 1};
 int b[] = {31, 21, 21, 10, 0};
 int c2[] = {14, 17, 17, 10, 0};
@@ -38,35 +38,30 @@ const int accX = A0;
 const int accY = A1;
 const int accZ = A2;
 const int noPixels  = 10;   // the number of LEDs in our display
-const int LEDpinmap[noPixels] = {2,3,4,5,6,7,8,9,10,11};  // maps the LEDs to the corresponding o/p pins
+const int LEDpinmap[noPixels] = {2,3,4,5,6,7,8,9,10,11};  // maps the LEDs to the corresponding i/o pins
 // pin 2 is the top led
 
 // POV variables
-double delayTime = 10;
-double charBreak = 10;
-long tick = 0;
-long tock = 0;
-long currentSwing = 600;
-int swingTime = 0;
-int left = 0;
-int right = 0;
-int currentRate = 0;
-int pattern = 0;
-int pos_thresh;         // positive acceleration threshold
-int neg_thresh;         // negatiive acceleration threshold
-boolean swingLeft;        // decelleration flag
-int dir;
-long edgeTime;
+double delayTime = 10;    // initalized to a value incase the setting below breaks
+double charBreak = 10;    // initalized to a value incase the setting below breaks
+long currentSwing = 600;  // initalized to a value incase the setting below breaks
+long tick = 0;            // used for timing the length of one swing
+long tock = 0;            // used for timing the length of one swing
+boolean swingLeft;        // flag to dictate if it is a L->R swing
+long edgeTime;            // used for remembering the millis that it last detected an edge
 
-// Stuff for the accelerometer part
-int xdata;
-int ydata;
-int deltax;
-int deltay;
-int oldx;
-int oldy;
-int magnitude_accelerometer;
-int mag_movement = 10; //  The minimum value of magnitude accelerometer that means there has been movement
+// Accelerometer variables
+int xdata;                // stores the value read in from the X pin
+int ydata;                // stores the value read in from the Y pin
+int deltaxy;              // stores the delta calculation of the combination of X and Y
+int oldx;                 // stores the value from the last X reading
+int oldy;                 // stores the value from the last Y reading
+int mag_movement = 10;    // the threshold that deltaxy must pass in order for an edge to be detected
+
+/**************************************************************/
+// change the desired string here
+char *toDisplay = "beavers"; // only lowercase and space allowed!!
+/**************************************************************/
 
 void setup() 
 {
@@ -79,7 +74,6 @@ void setup()
   {
     pinMode(LEDpinmap[i], OUTPUT); 
   } 
-  
   pinMode(accX, INPUT);
   pinMode(accY, INPUT);
   pinMode(accZ, INPUT);
@@ -89,19 +83,18 @@ void loop()
 {
   // reference the external voltage reference, in order to make the median V 3.3
   analogReference(EXTERNAL);
-  displayString("working"); // change here
+
+  // call the function which displays the preset string
+  displayString(toDisplay);
 }
 
-// function that acceps an interger containing the hight of a specific row of a character and maps it into LED's
+// function that acceps an integer containing the hight of a specific row of a character and maps it into LED's
 void displayLine(int line)
 {
   int myline;
   myline = line;
-  //if (myline>=16) {digitalWrite(LEDpinmap[0], HIGH); myline-=16;} else {digitalWrite(LEDpinmap[0], LOW);}
-  //if (myline>=8)  {digitalWrite(LEDpinmap[1], HIGH); myline-=8;}  else {digitalWrite(LEDpinmap[1], LOW);}
-  //if (myline>=4)  {digitalWrite(LEDpinmap[2], HIGH); myline-=4;}  else {digitalWrite(LEDpinmap[2], LOW);}
-  //if (myline>=2)  {digitalWrite(LEDpinmap[3], HIGH); myline-=2;}  else {digitalWrite(LEDpinmap[3], LOW);}
-  //if (myline>=1)  {digitalWrite(LEDpinmap[4], HIGH); myline-=1;}  else {digitalWrite(LEDpinmap[4], LOW);}
+
+  // walk down the column and determine which LED's must be set to on
   if (myline>=16)
   {
     digitalWrite(LEDpinmap[0], HIGH); 
@@ -162,7 +155,7 @@ void displayLine(int line)
   adjustSpeed();
 }
 
-// function that accepts one character from the provided word and calls display line for each of the 5 preset lines of a char
+// function that accepts one character from the provided word and calls display line for each of the 5 preset lines of a char, from left to right
 void displayCharL(char c)
 {
   if (c == 'a'){for (int i = 0; i <5; i++){displayLine(a[i]);delay(delayTime);}displayLine(0);}
@@ -193,14 +186,17 @@ void displayCharL(char c)
   if (c == 'z'){for (int i = 0; i <5; i++){displayLine(z[i]);delay(delayTime);}displayLine(0);}
   if (c == ' '){for (int i = 0; i <5; i++){displayLine(space[i]);delay(delayTime);}displayLine(0);}
 
+  Serial.print(c);
+  Serial.print(",");
+
   // add in the preset character spacing
   delay(charBreak);
 }
 
-// function that accepts one character from the provided word and calls display line for each of the 5 preset lines of a char
+// function that accepts one character from the provided word and calls display line for each of the 5 preset lines of a char, from right to left
 void displayCharR(char c)
 {
-  /*if (c == 'a'){for (int i = 5; i > 0; i--){displayLine(a[i]);delay(delayTime);}displayLine(0);}
+  if (c == 'a'){for (int i = 5; i > 0; i--){displayLine(a[i]);delay(delayTime);}displayLine(0);}
   if (c == 'b'){for (int i = 5; i > 0; i--){displayLine(b[i]);delay(delayTime);}displayLine(0);}
   if (c == 'c'){for (int i = 5; i > 0; i--){displayLine(c2[i]);delay(delayTime);}displayLine(0);}
   if (c == 'd'){for (int i = 5; i > 0; i--){displayLine(d[i]);delay(delayTime);}displayLine(0);}
@@ -226,89 +222,116 @@ void displayCharR(char c)
   if (c == 'x'){for (int i = 5; i > 0; i--){displayLine(x[i]);delay(delayTime);}displayLine(0);}
   if (c == 'y'){for (int i = 5; i > 0; i--){displayLine(y[i]);delay(delayTime);}displayLine(0);}
   if (c == 'z'){for (int i = 5; i > 0; i--){displayLine(z[i]);delay(delayTime);}displayLine(0);}
-  */
   if (c == ' '){for (int i = 5; i > 0; i--){displayLine(space[i]);delay(delayTime);}displayLine(0);}
+
+  Serial.print(c);
+  Serial.print(",");
   
   // add in the preset character spacing
   delay(charBreak);
 }
 
-// takes the given string and calls displayChar for each character of the string
+// function that takes the given string and calls the appropriate displayChar for each character of the string based on the direction of the swing
 void displayString(char* s)
 {
+  
+  // for a L->R swing
   if (swingLeft)
   {
     for (int i = 0; i<=strlen(s); i++)
     {
+      // check to see if the swing is no longer L->R, if so we need to break the printing short
+      adjustSpeed();
+      if (!swingLeft) 
+        break;
+
+      // otherwise, display the char
       displayCharL(s[i]);
     }
   }
+
+  // for a R->L swing
   else
   {
     for (int i = strlen(s); i >= 0; i--)
     {
-      displayCharR(' ');
+      // check to see if the swing is no longer R->L, if so we need to break the printing short
+      adjustSpeed();
+      if (swingLeft)
+        break;
+
+      // otherwise, display the char
+      displayCharR(s[i]);
     }
   }
 }  
 
-// reads in the accelerometer data and adjusts the display speed accordingly
+// function that reads in the accelerometer data and adjusts the display speed and direction accordingly
 void adjustSpeed()
 {
   // testing for finding the "normal" acc values
-  Serial.print(analogRead(accX));
+  /*Serial.print(analogRead(accX));
   Serial.print("    ");
-  Serial.print(analogRead(accY));
-  Serial.print("\n");
+  Serial.println(analogRead(accY));
+  Serial.println(deltaxy);*/
 
-  // CHECK ACCELEROMETER
+  // read in the acc data
   ydata = analogRead(accY);
   xdata = analogRead(accX); 
-   
-  deltay = ydata - oldy;
-  deltay = xdata - oldx;
-  
-  deltay = sqrt(pow(deltay,2));
- 
+
+  // math to determine the difference from the old to the new
+  deltaxy = xdata + ydata - oldx - oldy;
+
+  // math to determine the magnitute of acceleration rate of change
+  deltaxy = sqrt(pow(deltaxy,2));
+
+  // remember the old values
   oldy = ydata;
   oldx = xdata;
 
-  //Serial.println(deltay);
-  if (deltay> mag_movement) 
-  {      
-    if(millis() > (edgeTime + (currentSwing*.60)))
-    {      
-      // sit and wait for a L -> R swing
-      if((ydata - 500) < -20)
+  // if the delta is above the preset magnitude, we have detected an edge
+  if (deltaxy> mag_movement) 
+  {     
+
+    // check to make sure an edge didnt get detected twice at one side
+    if(millis() > (edgeTime + (currentSwing*.4)))
+    {
+      Serial.print("reading: ");
+      Serial.println((xdata + ydata - 1000)); 
+      // check if the swing is L -> R
+      if((xdata + ydata - 1000) < -200)
       {
+          // store the time which the edge was detected, and set the left hand flag
           tick = millis();
+          edgeTime = millis();
           swingLeft = true;
-          edgeTime = millis();
-          /*Serial.print("swing delay: ");
-          Serial.println(currentSwing); 
-          Serial.println("\nDetected L edge\n");*/
+          //Serial.print("swing delay: ");
+          //Serial.println(currentSwing); 
+          Serial.println("\nDetected L edge\n");
       }
-      else if ((ydata - 500) > 20)
+
+      // check if the swing is R -> L
+      else if ((xdata + ydata - 1000) > 200)
       {
-          tock = millis();    
+          // store the time which the edge was detected, and set the left hand flag to false
+          tock = millis();   
+          edgeTime = millis(); 
           swingLeft = false;
-          edgeTime = millis();
-          /*Serial.print("swing delay: ");
-          Serial.println(currentSwing); 
-          Serial.println("\nDetected R edge\n");*/
+          //Serial.print("swing delay: ");
+          //Serial.println(currentSwing); 
+          Serial.println("\nDetected R edge\n");
       }    
     }
   }
 
+  // check if the timed swing is within "realistic" parameters
   if((tock - tick) > 300 && (tock - tick) < 1000 )
   {
-    Serial.print("swing time: ");
-    Serial.println(currentSwing);
+    // if it is, calculate the appropriate delays and set them
     currentSwing = tock - tick;
-    delayTime = (currentSwing/150);
-    charBreak = (delayTime*2);
+    delayTime = (currentSwing / (strlen(toDisplay) * 22));
+    charBreak = (delayTime * 2);
   }
 }
 
 //Parts of the code are donated from: https://diyhacking.com/arduino-pov-display/, which is an open source DIY website. Therefore, all tutorials and code are on the public domain.
-// and from: https://github.com/unigamer/POV-Wand/blob/master/Arduino/POV_Wand/POV_Wand.ino
