@@ -1,6 +1,7 @@
 /*
  * For ECE 341
  * Team 1
+ * Caleb Hubbell, Mohamed Eldebri, Tony Penoyer
  * POV wand project
  */
 
@@ -88,7 +89,7 @@ void loop()
   displayString(toDisplay);
 }
 
-// function that acceps an integer containing the hight of a specific row of a character and maps it into LED's
+// function that acceps an integer containing the height of a specific row of a character and maps it into LED's
 void displayLine(int line)
 {
   int myline;
