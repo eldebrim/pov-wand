@@ -33,7 +33,7 @@ int x[] = {17, 10, 4, 10, 17};
 int y[] = {17, 10, 4, 8, 16};
 int z[] = {19, 21, 21, 25, 0};
 int space[] = {0,0,0,0,0};
-int ex[] = {29,29,0,0,0};
+int ex[] = {29,0,0,0,0};
 
 // Variables to dictate pin headers
 const int accX = A0;
@@ -62,10 +62,10 @@ int mag_movement = 10;    // the threshold that deltaxy must pass in order for a
 
 /**************************************************************/
 // change the desired string here
-char *toDisplay0 = "  yahoo !";
-char *toDisplay1 = "";  // only lowercase and space allowed!!
-char *toDisplay2 = "";
-char *toDisplay3 = "";
+char *toDisplay0 = "   xylphone   "; // only lowercase, space and '!' allowed!!
+char *toDisplay1 = " beavers ";  
+char *toDisplay2 = " yahoo ";
+char *toDisplay3 = " yipee! ";
 char *toDisplay4 = "";
 /**************************************************************/
 
@@ -89,17 +89,21 @@ void loop()
 {
   // reference the external voltage reference, in order to make the median V 3.3
   analogReference(EXTERNAL);
-
   // call the function which displays the preset string
   displayString(toDisplay0);
-
-  /*displayString(toDisplay1);
-
-  displayString(toDisplay2);
- 
-  displayString(toDisplay3);
-  
-  displayString(toDisplay4);*/
+  /*long starttime = millis();  //this section used for diplaying multiple words
+  while ((millis() - starttime) <=4000) {
+    displayString(toDisplay0);
+  }
+  while ((millis() - starttime) >=4000 && (millis()-starttime) <= 8000) {
+    displayString(toDisplay1);
+  }
+  while ((millis() - starttime) >=8000 && (millis()-starttime) <= 12000) {
+    displayString(toDisplay2);
+  }
+   while ((millis() - starttime) >=12000 && (millis()-starttime) <= 16000) {
+    displayString(toDisplay3);
+  }*/
   
 }
 
